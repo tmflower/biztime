@@ -8,6 +8,11 @@ const ExpressError = require("./expressError")
 
 app.use(express.json());
 
+const compRoutes = require("./routes/companies");
+app.use("/companies", compRoutes);
+
+const invoiceRoutes = require("./routes/invoices");
+app.use("/invoices", invoiceRoutes)
 
 /** 404 handler */
 
@@ -26,6 +31,10 @@ app.use((err, req, res, next) => {
     message: err.message
   });
 });
+
+app.listen(3000, () => {
+  console.log("Server started on 3000.")
+})
 
 
 module.exports = app;
