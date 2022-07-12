@@ -39,22 +39,35 @@ router.post("/", async (req, res, next) => {
     }
 });
 
-
-
 router.put("/:id", async (req, res, next) => {
     try {
         const id = req.params.id;
-        const { amt } = req.body;
-        const results = await db.query('UPDATE invoices SET amt=$1 WHERE id=$2 RETURNING id, comp_code, amt, paid, add_date, paid_date', [amt, id]);
+        let results = await db.query('SELECT id, comp_code, amt, paid, add_date, paid_date FROM invoices WHERE id=$1', [id]);
         if (results.rows.length === 0) {
-            return res.status(404).json({ message: `No invoices exists with id of ${id}.`});
+            return res.status(404).json({ message: `No invoice exists with id of ${id}.`});
         }
-        return res.status(201).json({ invoice: results.rows[0] })
+        const { amt, paid } = req.body;
+
+        if (results.rows[0].paid === false && paid === true) {          
+            const paid_date = new Date();
+            results = await db.query(`UPDATE invoices SET amt=$1, paid=$2, paid_date=$3 WHERE id=$4 RETURNING id, amt, paid, add_date, paid_date`, [amt, paid, paid_date, id]);
+            return res.status(201).json({ invoice: results.rows[0]})
+        }
+        else if (results.rows[0].paid === true && paid === false) {
+            const paid_date = null;
+            results = await db.query(`UPDATE invoices SET amt=$1, paid=$2, paid_date=$3 WHERE id=$4 RETURNING id, amt, paid, add_date, paid_date`, [amt, paid, paid_date, id]);
+            return res.status(201).json({ invoice: results.rows[0] })
+        }
+        else {
+            results = await db.query(`UPDATE invoices SET amt=$1, paid=$2 WHERE id=$3 RETURNING id, amt, paid, add_date, paid_date`, [amt, paid, id]);
+            return res.status(201).json({ invoice: results.rows[0] })
+        }        
     }
     catch (err) {
         return next (err);
     }
 });
+
 
 router.delete("/:id", async (req, res, next) => {
     try {
