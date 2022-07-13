@@ -5,7 +5,6 @@ const ExpressError = require("../expressError")
 const slugify = require("slugify")
 
 router.get("/", async (req, res, next) => {
-    console.log(slugify("Apple Computer", {lower: true, replacement: ""}))
     try {
         const results = await db.query(`SELECT code, name, description FROM companies`);
         return res.status(200).json({ companies: results.rows });
@@ -18,16 +17,21 @@ router.get("/", async (req, res, next) => {
 router.get("/:code", async (req, res, next) => {
     try {
         const code = req.params.code;
-        const results = await db.query('SELECT code, name, description FROM companies WHERE code = $1', [code]);
+        const results = await db.query('SELECT c.code, c.name, c.description, i.industry FROM companies AS c LEFT JOIN connections ON c.code = connections.company_code LEFT JOIN industries as i ON connections.industry_code = i.code WHERE c.code = $1', [code]);
         if (results.rows.length === 0) {
             return res.status(404).json({ message: `Company code ${code} does not exist.`})
         }
+        
+        let industries = results.rows.map(r => r.industry);
+        results.rows[0].industry = industries
+        console.log(industries);
         return res.status(200).json({ company: results.rows[0] });
     }
     catch (err) {
         return next (err)
     }
 });
+
 
 router.post("/", async (req, res, next) => {
     try {
